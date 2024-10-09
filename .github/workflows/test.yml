@@ -1,0 +1,72 @@
+name: Android Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # https://github.blog/changelog/2023-02-23-hardware-accelerated-android-virtualization-on-actions-windows-and-linux-larger-hosted-runners/
+      - name: Enable KVM group perms
+        run: |
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: '34.0.0'
+          components: platform-tools, emulator
+
+      - name: Install NDK
+        run: sdkmanager "ndk;25.1.8937393"
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.9.0
+        with:
+          # Avoid downloading Bazel every time.
+          bazelisk-cache: true
+          # Store build cache per workflow.
+          disk-cache: ${{ github.workflow }}
+          # Share repository cache between workflows.
+          repository-cache: true
+
+      - name: Install system image for emulator
+        env:
+          ANDROID_SDK_HOME: ${{ env.ANDROID_HOME }} # old envar name used by emulator
+        run: |
+          sdkmanager --install "system-images;android-34;default;x86_64"
+          echo "no" | avdmanager --verbose create avd --force --name testAVD --package "system-images;android-34;default;x86_64"
+          $ANDROID_HOME/emulator/emulator -list-avds
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build app
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.1.8937393
+        run: bazel build //android:app --config=ci --verbose_failures
+
+      - name: Test app
+        env:
+          ANDROID_SDK_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.1.8937393
+        run: |
+          adb start-server
+          $ANDROID_HOME/emulator/emulator -avd testAVD -noaudio -no-boot-anim -netdelay none -no-window -no-snapshot -no-metrics &
+          sleep 120
+          adb wait-for-device
+          bazel test //android:test_no_crash --config=ci --test_env=ANDROID_HOME=$ANDROID_HOME --verbose_failures --test_output=all

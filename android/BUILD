@@ -1,11 +1,4 @@
 load("@rules_kotlin//kotlin:android.bzl", "kt_android_library")
-load("@rules_kotlin//kotlin:core.bzl", "kt_compiler_plugin")
-
-sh_test(
-    name = "test_no_crash",
-    srcs = ["test_no_crash.sh"],
-    data = [":app"],
-)
 
 # Generates a app binary (.apk).
 android_binary(
@@ -37,5 +30,11 @@ kt_android_library(
 sh_binary(
     name = "install",
     srcs = ["install.sh"],
+    data = [":app"],
+)
+
+sh_test(
+    name = "test_no_crash",
+    srcs = ["test_no_crash.sh"],
     data = [":app"],
 )

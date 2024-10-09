@@ -6,9 +6,6 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-echo "Deleting previous app and data"
-$ANDROID_HOME/platform-tools/adb uninstall example.rust
-
 echo "Installing app"
 $ANDROID_HOME/platform-tools/adb install android/app.apk
 

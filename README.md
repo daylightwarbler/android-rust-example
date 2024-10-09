@@ -11,7 +11,7 @@
 
 Commands:
 
-```
+```shell
 # Build the app
 bazel build //android:app --config=android
 
@@ -19,9 +19,11 @@ bazel build //android:app --config=android
 bazel run //android:install --config=android
 ```
 
-```
-# Run the very basic smoke test. Just checks that the app didn't crash during launch.
+```shell
+# Run the basic test, which checks that the app didn't crash on an assert.
 bazel test //android:test_no_crash --config=android --test_env=ANDROID_HOME=$ANDROID_HOME
 ```
 
-It may be necessary to make the sh binaries `android/install.sh` and `android/test_no_crash.sh` runnable with `chmod +x install.sh`.
+Use [`ibazel`](https://github.com/bazelbuild/bazel-watcher) to automatically build/run/test on code changes.
+
+It may be necessary to make the sh binaries `android/install.sh` and `android/test_no_crash.sh` runnable with `chmod +x`.
